@@ -1,4 +1,4 @@
-# gas-webapp-sales-dx
+# gas-webapp-ｓales-management-graph & ranking
 - GASで作成したWebアプリ（営業管理グラフ & ランキング）
 
 # GAS Webアプリ①：営業管理グラフ & ランキング
