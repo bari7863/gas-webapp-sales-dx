@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 16px;
+        background: #f5f5f7;
+      }
+
+      h1 {
+        font-size: 22px;
+        margin: 0 0 35px;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        background: linear-gradient(90deg, #a78bfa, #7c3aed, #4c1d95);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.18));
+      }
+
+      .tab-bar {
+        margin-bottom: 30px;
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      /* スクロールしてもヘッダー部分を追従させる */
+      .sticky-header {
+        position: sticky;
+        top: 0;
+        z-index: 9000;
+        background: rgba(245, 245, 247, 0.92);
+        backdrop-filter: blur(10px);
+        padding-top: 6px;
+        padding-bottom: 6px;
+      }
+
+      .tab-btn {
+        padding: 8px 16px;
+        margin-right: 0;
+        border-radius: 999px;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        color: #374151;
+        background: linear-gradient(135deg, #e0f2fe, #fee2ff); /* パステル系グラデーション */
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+        transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.1s ease;
+      }
+
+      .tab-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
+        opacity: 0.95;
+      }
+
+      .tab-btn.active {
+        background: linear-gradient(135deg, #4f46e5, #ec4899); /* アクティブ時のグラデーション */
+        color: #ffffff;
+      }
+
+      /* 当日ボタンを青系グラデーションにする */
+      #btn-daily.tab-btn {
+        background: linear-gradient(135deg, #e0f2fe, #bfdbfe);
+      }
+      #btn-daily.tab-btn.active {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: #ffffff;
+      }
+
+      /* 当日ランキングボタンも当日と同じ青系グラデーションにする */
+      #btn-daily-ranking.tab-btn {
+        background: linear-gradient(135deg, #e0f2fe, #bfdbfe);
+      }
+      #btn-daily-ranking.tab-btn.active {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: #ffffff;
+      }
+
+      /* 月間・月間ランキングボタンを紫系グラデーションにする */
+      #btn-monthly.tab-btn,
+      #btn-monthly-ranking.tab-btn {
+        background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+      }
+
+      #btn-monthly.tab-btn.active,
+      #btn-monthly-ranking.tab-btn.active {
+        background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+        color: #ffffff;
+      }
+
+      .view {
+        display: none;
+      }
+
+      .view.active {
+        display: block;
+      }
+
+      .chart-block {
+        background: linear-gradient(135deg, rgba(239, 246, 255, 0.9), rgba(253, 242, 255, 0.9));
+        margin-bottom: 24px;
+        padding: 16px 20px;
+        border-radius: 20px;
+        box-shadow:
+          0 18px 40px rgba(15, 23, 42, 0.16),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(18px);
+      }
+
+      /* ★当日（グラフ/ランキング）：水色のおしゃれグラデ背景 */
+      #daily-view .chart-block,
+      #daily-ranking-view .chart-block {
+        background: linear-gradient(
+          135deg,
+          rgba(224, 242, 254, 0.95),
+          rgba(191, 219, 254, 0.90),
+          rgba(125, 211, 252, 0.85)
+        );
+      }
+
+      /* ★月間（グラフ/ランキング）：紫のおしゃれグラデ背景 */
+      #monthly-view .chart-block,
+      #monthly-ranking-view .chart-block {
+        background: linear-gradient(
+          135deg,
+          rgba(237, 233, 254, 0.95),
+          rgba(221, 214, 254, 0.90),
+          rgba(196, 181, 253, 0.85)
+        );
+      }
+
+      .chart-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 4px 0 8px;
+        color: #111827;
+      }
+
+      .chart {
+        width: 100%;
+        height: 600px; /* 全体的に少し大きめに */
+        background:
+          radial-gradient(circle at top left,
+            rgba(255, 255, 255, 0.96) 0,
+            rgba(248, 250, 252, 0.92) 45%,
+            rgba(241, 245, 249, 0.88) 100%
+          ),
+          linear-gradient(135deg,
+            rgba(224, 231, 255, 0.34),
+            rgba(186, 230, 253, 0.26),
+            rgba(254, 215, 170, 0.16)
+          );
+        border-radius: 24px;
+        padding: 12px;
+        box-sizing: border-box;
+        box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.85);
+      }
+
+      /* 月間グラフだけ背景を変更 */
+      #monthly-main.chart {
+        background:
+          radial-gradient(circle at top left,
+            rgba(255, 255, 255, 0.96) 0,
+            rgba(250, 245, 255, 0.92) 45%,
+            rgba(237, 233, 254, 0.86) 100%
+          ),
+          linear-gradient(135deg,
+            rgba(233, 213, 255, 0.28),
+            rgba(186, 230, 253, 0.22),
+            rgba(254, 215, 170, 0.14)
+          );
+      }
+
+      .no-data {
+        padding: 24px;
+        color: #777;
+        text-align: center;
+      }
+
+      .conversion-chip-row {
+        margin-top: 8px;
+        margin-bottom: 16px;
+        display: grid;          /* 各氏名ごとに1列 */
+        justify-items: center;
+        gap: 8px;
+      }
+
+      /* 各氏名ごとのセル（チップを中央に置く） */
+      .conversion-chip-cell {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .apo-productivity {
+        font-size: 13px;
+        font-weight: 700;
+        color: #0b6b3a;
+      }
+
+      /* グラデーションの綺麗なチップ（サイズ指定） */
+      .conversion-chip {
+        display: grid;
+        grid-template-columns: auto auto;
+        grid-template-rows: auto auto auto;
+        column-gap: 16px;
+        row-gap: 15px;
+
+        align-items: center;
+        text-align: left;
+
+        padding: 20px 35px;
+        border-radius: 999px;
+        font-size: 17px;
+        font-weight: 600;
+        color: #ffffff;
+        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.22);
+      }
+
+      /* チップ内の配置（左=名前 / 右上=アポ率 / 右下=アポ生産性） */
+      .conversion-chip .chip-name {
+        grid-column: 1;
+        grid-row: 1 / span 3;
+        align-self: center;
+        justify-self: start;
+        font-weight: 900;
+        font-size: 17px;
+        line-height: 1.1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+      }
+
+      .conversion-chip .chip-rate {
+        grid-column: 2;
+        grid-row: 1;
+        font-weight: 900;
+        font-size: 17px;
+        line-height: 1.1;
+        white-space: nowrap;
+      }
+
+      .conversion-chip .chip-prod {
+        grid-column: 2;
+        grid-row: 2;
+        font-weight: 900;
+        font-size: 17px;
+        line-height: 1.1;
+        white-space: nowrap;
+      }
+
+      .conversion-chip .chip-sales {
+        grid-column: 2;
+        grid-row: 3;
+        font-weight: 900;
+        font-size: 17px;
+        line-height: 1.1;
+        white-space: nowrap;
+      }
+
+      /* ② 色違い用のバリエーション（桃,赤,橙,黄,緑,青,紫,茶,黄緑,青緑,紺,水色,ピンク,黄赤,金） */
+      .conversion-chip-1  { /* 桃 */
+        background: linear-gradient(135deg, #ffb3d6, #ff6faf);
+      }
+      .conversion-chip-2  { /* 赤 */
+        background: linear-gradient(135deg, #ff4b5c, #d50032);
+      }
+      .conversion-chip-3  { /* 橙 */
+        background: linear-gradient(135deg, #ffb347, #ff6f00);
+      }
+      .conversion-chip-4  { /* 黄（白文字が見えるよう少し濃いめ） */
+        background: linear-gradient(135deg, #ffd54f, #ffb300);
+      }
+      .conversion-chip-5  { /* 緑 */
+        background: linear-gradient(135deg, #81c784, #2e7d32);
+      }
+      .conversion-chip-6  { /* 青 */
+        background: linear-gradient(135deg, #64b5f6, #1e88e5);
+      }
+      .conversion-chip-7  { /* 紫 */
+        background: linear-gradient(135deg, #ba68c8, #8e24aa);
+      }
+      .conversion-chip-8  { /* 茶 */
+        background: linear-gradient(135deg, #a9745b, #6d4c41);
+      }
+      .conversion-chip-9  { /* 黄緑（黄より暗めにして白文字確保） */
+        background: linear-gradient(135deg, #dce775, #9e9d24);
+      }
+      .conversion-chip-10 { /* 青緑（ティール） */
+        background: linear-gradient(135deg, #4dd0e1, #00838f);
+      }
+      .conversion-chip-11 { /* 紺 */
+        background: linear-gradient(135deg, #5c6bc0, #283593);
+      }
+      .conversion-chip-12 { /* 水色 */
+        background: linear-gradient(135deg, #4fc3f7, #039be5);
+      }
+      .conversion-chip-13 { /* ピンク（桃と違う赤寄りピンク） */
+        background: linear-gradient(135deg, #f48fb1, #ec407a);
+      }
+      .conversion-chip-14 { /* 黄赤（オレンジレッド） */
+        background: linear-gradient(135deg, #ff8a65, #f4511e);
+      }
+      .conversion-chip-15 { /* 金 */
+        background: linear-gradient(135deg, #ffca28, #ff8f00);
+      }
+
+      /* ランキング表示 */
+      .ranking-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      @media (max-width: 900px), (max-device-width: 900px) {
+        .ranking-layout { grid-template-columns: 1fr; }
+      }
+
+      .ranking-metrics {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 18px;
+        margin-top: 16px;
+      }
+      .ranking-metric {
+        background: linear-gradient(
+          135deg,
+          rgba(248, 250, 252, 0.96),
+          rgba(224, 231, 255, 0.58),
+          rgba(240, 253, 250, 0.56)
+        );
+        border-radius: 16px;
+        padding: 12px;
+        box-shadow: inset 0 0 0 1px rgba(0, 96, 54, 0.18);
+      }
+      .ranking-metric-title {
+        align-items: center;
+        justify-content: center;
+        padding: 10px 18px;
+        border-radius: 999px;
+        font-weight: 900;
+        font-size: 16px;
+        color: #ffffff;
+        margin: 0 auto 12px;
+        width: fit-content;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+
+        /* スクロールしても上に固定 */
+        position: sticky;
+        top: var(--rankChipTop, 92px);
+        z-index: 2;
+      }
+      .ranking-metric-title.metric-call {
+        background: linear-gradient(135deg, #60a5fa, #2563eb);
+      }
+      .ranking-metric-title.metric-deal {
+        background: linear-gradient(135deg, #34d399, #059669);
+      }
+      .ranking-metric-title.metric-order {
+        background: linear-gradient(135deg, #f472b6, #db2777);
+      }
+      .ranking-metric-title.metric-productivity {
+        background: linear-gradient(135deg, #ffb347, #ff7a18);
+      }
+      .ranking-metric-title.metric-sales {
+        background: linear-gradient(135deg, #ff4b5c, #d50032);
+      }
+
+      .rank-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+        font-size: 16px;         /* 4位以下の基本サイズ */
+        color: #006036;          /* 4位以下：深緑 */
+      }
+
+      .rank-row:last-child { border-bottom: none; }
+
+      .rank-row.rank-1 { font-size: 22px; }
+      .rank-row.rank-2 { font-size: 19px; }
+      .rank-row.rank-3 { font-size: 17px; }
+
+      .rank-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .rank-badge {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-width: 56px;
+        font-weight: 900;
+        color: inherit;
+        line-height: 1.1;
+      }
+
+      .crown {
+        display: inline-block;
+        width: 1.2em;
+        height: 1.2em;
+      }
+      .crown.crown-1 { width: 1.8em; height: 1.8em; } /* 1位：豪華 */
+      .crown.crown-2 { width: 1.5em; height: 1.5em; } /* 2位 */
+      .crown.crown-3 { width: 1.35em; height: 1.35em; } /* 3位 */
+
+      .rank-name {
+        font-weight: 600;
+        color: inherit;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .rank-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+        color: inherit;
+        font-weight: 600;
+      }
+
+      .rank-rate {
+        color: inherit;
+        font-weight: 600;
+        font-size: inherit;
+      }
+
+      .rank-num {
+        font-size: 1.25em;
+        font-weight: 900;
+      }
+
+      .chart-title.ranking-page-title {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-weight: 900;
+        font-size: 14px;
+        color: #ffffff;
+        margin: 0 0 12px 0;
+        width: fit-content;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
+      }
+      .chart-title.ranking-page-title.daily {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      }
+      .chart-title.ranking-page-title.monthly {
+        background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      }
+
+      /* ★1〜3位は、名前・件数・商談化率を全部 同じ色に（グラデなし） */
+      .rank-row.rank-1 .rank-num,
+      .rank-row.rank-1 .rank-name,
+      .rank-row.rank-1 .rank-right,
+      .rank-row.rank-1 .rank-right span {
+        color: #b8860b; /* 金っぽい単色 */
+        -webkit-text-stroke: 0.6px rgba(15, 23, 42, 0.35);
+        text-shadow: 0 1px 1px rgba(15, 23, 42, 0.25);
+      }
+
+      .rank-row.rank-2 .rank-num,
+      .rank-row.rank-2 .rank-name,
+      .rank-row.rank-2 .rank-right,
+      .rank-row.rank-2 .rank-right span {
+        color: #94a3b8; /* 銀っぽい単色 */
+        -webkit-text-stroke: 0.6px rgba(15, 23, 42, 0.35);
+        text-shadow: 0 1px 1px rgba(15, 23, 42, 0.22);
+      }
+
+      .rank-row.rank-3 .rank-num,
+      .rank-row.rank-3 .rank-name,
+      .rank-row.rank-3 .rank-right,
+      .rank-row.rank-3 .rank-right span {
+        color: #b45309; /* 銅っぽい単色 */
+        -webkit-text-stroke: 0.6px rgba(15, 23, 42, 0.35);
+        text-shadow: 0 1px 1px rgba(15, 23, 42, 0.22);
+      }
+
+      /* 右上：更新ボタン */
+      .refresh-btn {
+        position: fixed;
+        top: 40px;
+        right: 14px;
+        z-index: 9999;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 900;
+        color: #fff;
+        background: linear-gradient(135deg, #a3e635, #22c55e);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+        transition: transform 0.1s ease, opacity 0.1s ease, box-shadow 0.1s ease;
+      }
+      .refresh-btn:hover {
+        transform: translateY(-1px);
+        opacity: 0.96;
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.22);
+      }
+      .refresh-btn:active { transform: translateY(0); opacity: 0.92; }
+      .refresh-btn[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+      /* 左上：更新中バッジ */
+      .updating-badge {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 9999;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        color: #fff;
+        font-weight: 900;
+        background: linear-gradient(135deg, #111827, #0b1220, #000000);
+        box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+      }
+
+      .hidden { display: none !important; }
+
+      body.is-mobile {
+        margin: 10px !important;
+        font-size: 20px !important;
+      }
+
+      body.is-mobile h1 {
+        font-size: 28px !important;
+      }
+
+      body.is-mobile .refresh-btn {
+        top: 15px !important;
+        padding: 14px 25px !important;
+        font-size: 25px !important;
+      }
+
+      body.is-mobile .tab-bar {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 20px !important;
+      }
+
+      body.is-mobile .tab-btn {
+        padding: 14px 18px !important;
+        font-size: 25px !important;
+      }
+
+      body.is-mobile .chart-title {
+        font-size: 20px !important;
+      }
+
+      body.is-mobile .conversion-chip .chip-name,
+      body.is-mobile .conversion-chip .chip-rate,
+      body.is-mobile .conversion-chip .chip-prod {
+        font-size: 18px !important;
+      }
+
+      body.is-mobile .ranking-metric-title {
+        font-size: 30px !important;
+        padding: 14px 22px !important;
+
+        position: sticky;
+        top: 12px;
+        z-index: 2;
+      }
+
+      body.is-mobile .rank-row {
+        font-size: 25px !important;
+        padding: 10px 120px !important; /* 左右に余白を作って、端に寄らないようにする */
+      }
+      body.is-mobile .rank-row.rank-1 { font-size: 34px !important; }
+      body.is-mobile .rank-row.rank-2 { font-size: 31px !important; }
+      body.is-mobile .rank-row.rank-3 { font-size: 28px !important; }
+
+      /* JSが body に is-mobile を付けたら、幅に関係なくスマホ用レイアウトを強制 */
+      body.is-mobile .conversion-chip-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+
+      body.is-mobile .conversion-chip .chip-name {
+        white-space: nowrap !important;
+      }
+
+      body.is-mobile .ranking-metrics {
+        grid-template-columns: 1fr;
+      }
+
+      body.is-mobile .ranking-metric {
+        height: var(--mobileRankMetricH, 300px);
+        max-height: none !important;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* くるくる */
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        border-top-color: rgba(255, 255, 255, 0.95);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      /* 反映確認ポップアップ */
+      .apply-modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.18);
+      }
+
+      .apply-modal {
+        min-width: 280px;
+        max-width: min(520px, calc(100vw - 32px));
+        padding: 18px 18px 14px;
+        border-radius: 22px;
+        color: #fff;
+        background: linear-gradient(135deg, #60a5fa, #2563eb, #1d4ed8);
+        box-shadow: 0 22px 50px rgba(15, 23, 42, 0.28);
+      }
+
+      .apply-modal-title {
+        font-size: 16px;
+        font-weight: 900;
+        margin: 0 0 12px;
+      }
+
+      .apply-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      /* チップ（いいえ/はい） */
+      .apply-chip {
+        border: none;
+        border-radius: 999px;
+        padding: 10px 14px;
+        cursor: pointer;
+        font-weight: 900;
+        color: #fff;
+        transition: transform 0.1s ease, opacity 0.1s ease;
+      }
+      .apply-chip:hover { transform: translateY(-1px); opacity: 0.96; }
+      .apply-chip:active { transform: translateY(0); opacity: 0.92; }
+
+      .apply-chip.ghost {
+        background: linear-gradient(135deg, #1e3a8a, #0b1220);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+      }
+
+      .apply-chip.primary {
+        background: linear-gradient(135deg, #93c5fd, #3b82f6);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+      }
+
+      /* 読み込み中...ポップアップ（紫グラデ） */
+      .loading-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.18);
+      }
+
+      .loading-modal {
+        min-width: 220px;
+        max-width: min(520px, calc(100vw - 32px));
+        padding: 16px 18px;
+        border-radius: 22px;
+        color: #fff;
+        font-weight: 900;
+        background: linear-gradient(135deg, #a78bfa, #7c3aed, #4c1d95);
+        box-shadow: 0 22px 50px rgba(15, 23, 42, 0.28);
+        text-align: center;
+      }
+      
+      /* スマホ画面 */
+      @media (max-width: 900px), (max-device-width: 900px) {
+
+        /* スマホ：画面いっぱいで見やすいサイズに */
+        body { margin: 8px; font-size: 20px; }
+        h1 { font-size: 28px; }
+
+        /* スマホ：更新ボタン位置 */
+        .refresh-btn {
+          top: 5px;
+          padding: 14px 22px;
+          font-size: 18px;
+        }
+
+        .tab-btn { padding: 14px 18px; font-size: 18px; }
+        .chart-title { font-size: 20px; }
+
+        .rank-row { font-size: 29px; }
+        .rank-row.rank-1 { font-size: 40px; }
+        .rank-row.rank-2 { font-size: 35px; }
+        .rank-row.rank-3 { font-size: 32px; }
+
+        /* チップ文字も拡大 */
+        .conversion-chip .chip-name,
+        .conversion-chip .chip-rate,
+        .conversion-chip .chip-prod {
+          font-size: 18px;
+        }
+
+        /* スマホではカード内スクロール：枠のすぐ下で固定 */
+        .ranking-metric-title {
+          position: sticky;
+          top: var(--rankChipTop, 92px);
+          z-index: 2;
+        }
+
+        /* グラフ下のチップ：横3人→横2人 */
+        .conversion-chip-row {
+          grid-template-columns: repeat(2, 1fr) !important;
+        }
+
+        /* チップがスマホ幅で収まるように（名前は1行のまま…省略） */
+        .conversion-chip {
+          padding: 14px 18px;
+          column-gap: 10px;
+          row-gap: 4px;
+          min-width: 0;
+        }
+        .conversion-chip .chip-name,
+        .conversion-chip .chip-rate,
+        .conversion-chip .chip-prod {
+          font-size: 16px;
+        }
+        .conversion-chip .chip-name {
+          max-width: 10em;
+          white-space: nowrap !important; /* ←念のため“必ず1行”を固定 */
+        }
+
+        /* ランキング：横並び禁止→縦並び（コール数→アポ数/アポ率→アポ生産性） */
+        .ranking-metrics {
+          grid-template-columns: 1fr;
+        }
+
+        /* 名前を約5人分見せて、枠内スクロールで全員見れるように */
+        .ranking-metric {
+          max-height: 300px; /* ←360px→300pxに変更（5人くらいで止まる高さに寄せる） */
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+      }
+
+    </style>
+    <script>
+      google.charts.load('current', { packages: ['corechart', 'bar'] });
+      google.charts.setOnLoadCallback(init);
+      var chartData = null; // GASから受け取ったデータを保持
+
+      var currentView = 'daily';
+      var pendingChartData = null;
+      var isUpdating = false;
+
+      var isLoading = false;
+
+      var IS_MOBILE = false;
+
+      function computeIsMobile_() {
+        try {
+          if (window.matchMedia('(pointer:coarse)').matches) return true;
+          if (window.matchMedia('(max-width: 900px)').matches) return true;
+          if (window.matchMedia('(max-device-width: 900px)').matches) return true;
+        } catch (e) {}
+
+        var w = window.innerWidth || 9999;
+        if (w <= 900) return true;
+
+        var ua = navigator.userAgent || '';
+        return /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+      }
+
+      function applyMobileClass_() {
+        IS_MOBILE = computeIsMobile_();
+        if (document && document.body) {
+          document.body.classList.toggle('is-mobile', IS_MOBILE);
+        }
+      }
+
+      function syncRankLayoutVars_() {
+        // ランキング画面が表示中のときだけ処理
+        var metrics = document.querySelector('#daily-ranking-view.active .ranking-metrics, #monthly-ranking-view.active .ranking-metrics');
+        if (!metrics) return;
+
+        // PC：最上部にいる時のチップ位置を固定（scroll=0 の位置）
+        // ただし「ヘッダー下 + 空白」より上に来ないように補正する
+        if (!IS_MOBILE) {
+          var y = (window.pageYOffset || document.documentElement.scrollTop || 0);
+          if (y <= 1) {
+            var header = document.querySelector('.sticky-header');
+            var headerBottom = header ? header.getBoundingClientRect().bottom : 0;
+            var gap = 12; // ←ヘッダー下の空白
+
+            var t = metrics.querySelector('.ranking-metric-title');
+            if (t) {
+              var tTop = t.getBoundingClientRect().top;
+              var safeTop = Math.max(tTop, headerBottom + gap);
+              document.documentElement.style.setProperty('--rankChipTop', Math.round(safeTop) + 'px');
+            } else {
+              document.documentElement.style.setProperty('--rankChipTop', Math.round(headerBottom + gap) + 'px');
+            }
+          }
+          return;
+        }
+
+        // スマホ：残り高さを3分割してランキング枠の高さにする
+        var vh = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
+        var topY = metrics.getBoundingClientRect().top;
+        var style = window.getComputedStyle(metrics);
+        var gap = parseFloat(style.rowGap || style.gap || '0') || 0;
+
+        var avail = vh - topY - 12; // 下の余白を少しだけ残す
+        var per = Math.floor((avail - gap * 2) / 3);
+        if (per < 160) per = 160; // 小さすぎるのを防ぐ最低ライン
+
+        document.documentElement.style.setProperty('--mobileRankMetricH', per + 'px');
+      }
+
+      function setLoadingUI(flag) {
+        // 更新中は「読み込み中...」を出さない（更新しながら操作できるようにするため）
+        if (isUpdating) return;
+
+        isLoading = !!flag;
+        var overlay = document.getElementById('loadingOverlay');
+        if (overlay) overlay.classList.toggle('hidden', !isLoading);
+      }
+
+      function init() {
+        applyMobileClass_();
+        window.addEventListener('resize', applyMobileClass_);
+
+        // 初回の取得は「読み込み中...」を表示
+        setLoadingUI(true);
+
+        google.script.run
+          .withSuccessHandler(function (data) {
+            setLoadingUI(false);
+            drawAllCharts(data);
+          })
+          .withFailureHandler(function (err) {
+            setLoadingUI(false);
+            console.error(err);
+          })
+          .getAllChartData();
+      }
+
+      function drawAllCharts(data) {
+        // 受け取ったデータをグローバルに保持しておく
+        chartData = data;
+        // 初期表示は当日タブをアクティブにして、そのタイミングで描画する
+        setActiveView('daily');
+      }
+      
+      function setUpdatingUI(flag) {
+         isUpdating = !!flag;
+         var badge = document.getElementById('updatingBadge');
+         var btn = document.getElementById('btn-refresh');
+         if (badge) badge.classList.toggle('hidden', !isUpdating);
+         if (btn) btn.disabled = isUpdating;
+       }
+
+       function onRefreshClick() {
+         if (isUpdating) return;
+
+         pendingChartData = null;
+         setUpdatingUI(true);
+
+         google.script.run
+           .withSuccessHandler(function (data) {
+             setUpdatingUI(false);
+             pendingChartData = data || null;
+             openApplyModal();
+           })
+           .withFailureHandler(function (err) {
+             setUpdatingUI(false);
+             console.error(err);
+           })
+           .updateGraphNumbersOnly();
+       }
+
+       function openApplyModal() {
+         var overlay = document.getElementById('applyModalOverlay');
+         if (overlay) overlay.classList.remove('hidden');
+       }
+
+       function closeApplyModal() {
+         var overlay = document.getElementById('applyModalOverlay');
+         if (overlay) overlay.classList.add('hidden');
+       }
+
+       function onApplyYes() {
+         closeApplyModal();
+         if (pendingChartData) {
+           chartData = pendingChartData;
+           pendingChartData = null;
+           setActiveView(currentView);
+         }
+       }
+
+       function onApplyNo() {
+         closeApplyModal();
+         pendingChartData = null;
+       }
+
+      // グラフを「1チャートあたり9行（= 3名 × 3項目）」ずつに分割して縦に並べて描画する
+      function drawSection(containerId, title, rows) {
+        var container = document.getElementById(containerId);
+        if (!container) return;
+
+        if (!rows || rows.length === 0) {
+          container.innerHTML = '<div class="no-data">データがありません</div>';
+          return;
+        }
+
+        // いったん中身を全部クリア（タブ切り替えのたびに描画し直すため）
+        container.innerHTML = '';
+
+        // グラフとして出す項目
+        var rowsForChart = (rows || []).filter(function (r) {
+          if (!r) return false;
+          // グラフに出すのは「コール数・(商談数 or アポ数)・受注数」だけ
+          return (
+            r.metric === 'コール数' ||
+            r.metric === '商談数' ||
+            r.metric === 'アポ数' ||
+            r.metric === '受注数'
+          );
+        });
+
+        // アポ率・アポ生産性・売上金額
+        var apoRateByName = {};
+        var apoProdByName = {};
+        var salesByName = {};
+
+        (rows || []).forEach(function (r) {
+          if (!r || !r.name) return;
+
+          if (r.metric === 'アポ率') {
+            var v = Number(r.actual);
+            if (!isNaN(v)) apoRateByName[r.name] = v;
+            return;
+          }
+
+          if (r.metric === 'アポ生産性') {
+            var p = Number(r.actual);
+            if (!isNaN(p)) apoProdByName[r.name] = p;
+            return;
+          }
+
+          if (r.metric === '売上金額') {
+            var s = Number(r.actual);
+            if (!isNaN(s)) salesByName[r.name] = s;
+            return;
+          }
+        });
+
+        // 1チャートあたりの最大「氏名数」：PC=3人、スマホ=2人（並び順に関係なく必ずこの人数にする）
+        var isMobile = IS_MOBILE;
+        var namesPerChart = isMobile ? 2 : 3;
+
+        // rowsForChart に登場する氏名の順番（最初に出た順）を作る
+        var namesInOrder = [];
+        var nameSeenAll = {};
+        rowsForChart.forEach(function (r) {
+          if (!r || !r.name) return;
+          if (nameSeenAll[r.name]) return;
+          nameSeenAll[r.name] = true;
+          namesInOrder.push(r.name);
+        });
+
+        // 必要なチャート枚数を「氏名数」で計算
+        var chartsCount = Math.ceil(namesInOrder.length / namesPerChart);
+
+        // 親コンテナの高さを、サブグラフの個数分だけ確保しておく
+        var baseHeightPerChart = 420;
+        var marginPerChart = 40;
+        var chipExtraHeight = 140;
+
+        // チップの高さも含めて、親コンテナの高さを確保する
+        var totalHeight = chartsCount * (baseHeightPerChart + marginPerChart + chipExtraHeight);
+        container.style.height = totalHeight + 'px';
+
+        // 全サブグラフ共通で「何人目のチップか」を数えるカウンター
+        var chipColorCounter = 0;
+
+        // ★文字色（当日=空色 / 月間=紫色）
+        var axisColor = (containerId.indexOf('monthly') !== -1) ? '#7c3aed' : '#0ea5e9';
+
+        // ───────────────
+        // 9行ずつに分割してサブグラフを描画
+        // ───────────────
+        for (var c = 0; c < chartsCount; c++) {
+          // このチャートに出す「氏名」だけを切り出す（スマホなら必ず2人）
+          var subsetNames = namesInOrder.slice(
+            c * namesPerChart,
+            (c + 1) * namesPerChart
+          );
+
+          // その氏名の行だけを集める
+          var subsetRows = rowsForChart.filter(function (r) {
+            return r && subsetNames.indexOf(r.name) !== -1;
+          });
+
+          // 見やすい順に並べる（氏名順 → コール数 → アポ数）
+          var metricRank = { 'コール数': 0, '商談数': 1, 'アポ数': 1, '受注数': 2 };
+          subsetRows.sort(function (a, b) {
+            var ai = subsetNames.indexOf(a.name);
+            var bi = subsetNames.indexOf(b.name);
+            if (ai !== bi) return ai - bi;
+            return (metricRank[a.metric] ?? 99) - (metricRank[b.metric] ?? 99);
+          });
+
+          if (subsetRows.length === 0) continue;
+
+          // サブグラフ用コンテナを追加
+          var wrapper = document.createElement('div');
+          wrapper.style.width = '100%';
+          wrapper.style.marginBottom = '24px';
+          container.appendChild(wrapper);
+
+          var subDiv = document.createElement('div');
+          subDiv.style.width = '100%';
+          subDiv.style.height = baseHeightPerChart + 'px';
+          wrapper.appendChild(subDiv);
+
+          // DataTable 作成（このサブグラフ分だけ）
+          var dataTable = new google.visualization.DataTable();
+          dataTable.addColumn('string', 'ラベル');
+          dataTable.addColumn('number', '目標'); // series 0
+          dataTable.addColumn({ type: 'string', role: 'annotation' });
+          dataTable.addColumn('number', '実数'); // series 1
+          dataTable.addColumn({ type: 'string', role: 'annotation' });
+
+          subsetRows.forEach(function (r) {
+            // 「氏名 / 項目」を2行表示にして途中で切れないようにする
+            var baseLabel = r.label || (r.name + ' / ' + r.metric);
+            baseLabel = String(baseLabel).replace(/商談数/g, 'アポ数');
+            var label = String(baseLabel).replace(' / ', '\n');
+
+            var goal = Number(r.goal) || 0;
+            var act  = Number(r.actual) || 0;
+
+            dataTable.addRow([
+              label,
+              goal,
+              goal ? String(goal) : '',
+              act,
+              act ? String(act) : ''
+            ]);
+          });
+
+          // サブグラフ内での高さ調整
+          var rowCount   = dataTable.getNumberOfRows();
+          var rowHeight  = 30;
+          var chartHeight = Math.max(baseHeightPerChart, rowCount * rowHeight);
+          subDiv.style.height = chartHeight + 'px';
+
+          // 見た目の設定
+          var options = {
+            title: title,
+            legend: {
+              position: 'top',
+              textStyle: { fontSize: (IS_MOBILE ? 18 : 16), bold: true, color: axisColor }
+            },
+            // 目標=鮮やかなピンク系, 実数=鮮やかなブルー系
+            series: {
+              0: { color: '#fb4b8a' }, // 目標：ビビッドピンク
+              1: { color: '#3b82f6' }  // 実数：ビビッドブルー
+            },
+            // 内側/外側で Google が自動的に黒・白を切り替える
+            annotations: {
+              alwaysOutside: false,
+              textStyle: {
+                bold: true,
+                fontSize: (IS_MOBILE ? 18 : 16),
+                color: axisColor
+              },
+              highContrast: true
+            },
+            // 横軸（ラベル＝氏名/項目）
+            hAxis: {
+              textStyle: { fontSize: (IS_MOBILE ? 16 : 14), bold: true, color: axisColor },
+              slantedText: false
+            },
+            // 縦軸（数値）
+            vAxis: {
+              textStyle: { fontSize: (IS_MOBILE ? 16 : 14), bold: true, color: axisColor },
+              gridlines: { color: '#e5e7eb' },
+              minorGridlines: { color: '#f3f4f6' }
+            },
+            titleTextStyle: {
+              bold: true,
+              fontSize: (IS_MOBILE ? 22 : 18),
+              color: axisColor
+            },
+            bar: { groupWidth: '80%' },
+            chartArea: {
+              left: 80,
+              top: 60,
+              width: '82%',
+              height: '70%'
+            },
+            backgroundColor: {
+              fill: 'transparent'
+            }
+          };
+
+          // ★サブコンテナごとに縦グラフを描画
+          var chart = new google.visualization.ColumnChart(subDiv);
+          chart.draw(dataTable, options);
+
+          // ★各人の商談化率を、グラフのすぐ下にチップで表示
+          var chipRow = document.createElement('div');
+          chipRow.className = 'conversion-chip-row';
+
+          // ★このサブグラフに登場する氏名の順番（コール・商談・受注の塊ごと）を取得
+          var nameOrder = [];
+          var nameSeen  = {};
+
+          subsetRows.forEach(function (r) {
+            var n = r.name;
+            if (!n || nameSeen[n]) return;
+            nameSeen[n] = true;
+            nameOrder.push(n);
+          });
+
+          // 氏名ごとに1セルを作り、その中に必要であればチップを置く
+          var added = 0;
+
+          nameOrder.forEach(function (name) {
+            // アポ率（ある人だけ）
+            var raw = apoRateByName[name];
+            var hasRate = (raw != null && !isNaN(Number(raw)));
+
+            // アポ生産性（ある人だけ）
+            var prodRaw = apoProdByName[name];
+            var hasProd = (prodRaw != null && !isNaN(Number(prodRaw)));
+
+            // 売上金額（ある人だけ）
+            var salesRaw = salesByName[name];
+            var hasSales = (salesRaw != null && !isNaN(Number(salesRaw)));
+
+            // どれも無ければ表示しない
+            if (!hasRate && !hasProd && !hasSales) return;
+
+            var cell = document.createElement('div');
+            cell.className = 'conversion-chip-cell';
+
+            var chip = document.createElement('span');
+
+            // チップの色を「全サブグラフ累計の順番」で決める（1〜15）
+            chipColorCounter++;
+            var colorIndex = ((chipColorCounter - 1) % 15) + 1;
+            chip.className = 'conversion-chip conversion-chip-' + colorIndex;
+
+            // 左：名前（上下中央）
+            var nameDiv = document.createElement('div');
+            nameDiv.className = 'chip-name';
+            nameDiv.textContent = name;
+            chip.appendChild(nameDiv);
+
+            // 右上：アポ率
+            var rateDiv = document.createElement('div');
+            rateDiv.className = 'chip-rate';
+            if (hasRate) {
+              var percent = toPercent(raw);
+              rateDiv.textContent = 'アポ率　' + percent.toFixed(1) + '%';
+            } else {
+              rateDiv.textContent = ''; // 無い場合は空
+            }
+            chip.appendChild(rateDiv);
+
+            // 右下：アポ生産性
+            var prodDiv = document.createElement('div');
+            prodDiv.className = 'chip-prod';
+            if (hasProd) {
+              var s = Number(prodRaw).toFixed(1).replace(/\.0$/, '');
+              prodDiv.textContent = 'アポ生産性　' + s + '時間/件';
+            } else {
+              prodDiv.textContent = ''; // 無い場合は空
+            }
+            chip.appendChild(prodDiv);
+
+            // アポ生産性の下：売上金額
+            var salesDiv = document.createElement('div');
+            salesDiv.className = 'chip-sales';
+            if (hasSales) {
+              salesDiv.textContent = '売上金額　¥' + formatInt(salesRaw);
+            } else {
+              salesDiv.textContent = '';
+            }
+            chip.appendChild(salesDiv);
+
+            cell.appendChild(chip);
+            chipRow.appendChild(cell);
+            added++;
+          });
+
+          if (added > 0) {
+            // スマホは「最大2列」にする（1人しかいない場合は1列のまま）
+            var cols = isMobile ? Math.min(2, added) : added;
+            chipRow.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+            wrapper.appendChild(chipRow);
+          }
+        }
+      }
+
+      // ランキング表示用ユーティリティ
+      function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, function (s) {
+          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[s];
+        });
+      }
+
+      function toPercent(raw) {
+        var v = Number(raw);
+        if (isNaN(v)) return 0;
+        return v <= 1 ? v * 100 : v;
+      }
+
+      function formatInt(n) {
+        var v = Number(n);
+        if (isNaN(v)) v = 0;
+        return Math.round(v).toLocaleString('ja-JP');
+      }
+
+      function crownSvg(rank, color) {
+        var klass = 'crown crown-' + rank;
+
+        // SVG内IDの衝突回避（同じIDが複数あると別SVGのグラデを参照して崩れます）
+        var uid = 'crownGrad-' + rank + '-' + Math.random().toString(36).slice(2, 9);
+
+        // 1位=金 / 2位=銀 / 3位=銅（その他は渡されたcolorの単色にフォールバック）
+        var bodyStops, baseStops;
+        if (rank === 1) {
+          bodyStops = ['#FFF9E6', '#FFE8A3', '#F6C94D', '#D59B2A', '#FFF2BE'];
+          baseStops = ['#F6D36A', '#E5B84A', '#C88A1F'];
+        } else if (rank === 2) {
+          bodyStops = ['#F8FAFC', '#E5E7EB', '#BFC5CD', '#9CA3AF', '#F3F4F6'];
+          baseStops = ['#D7DBE0', '#B9C0C7', '#9AA3AD'];
+        } else if (rank === 3) {
+          bodyStops = ['#FFE2B8', '#F2B56A', '#D97706', '#8A4E13', '#F5D39B'];
+          baseStops = ['#E1A14A', '#C7771B', '#8A4E13'];
+        } else {
+          bodyStops = [color, color];
+          baseStops = [color, color];
+        }
+
+        function buildStops(colors) {
+          if (colors.length === 1) {
+            return '<stop offset="0%" stop-color="' + colors[0] + '"/>' +
+                  '<stop offset="100%" stop-color="' + colors[0] + '"/>';
+          }
+          var s = '';
+          for (var i = 0; i < colors.length; i++) {
+            var off = (i / (colors.length - 1)) * 100;
+            s += '<stop offset="' + off.toFixed(0) + '%" stop-color="' + colors[i] + '"/>';
+          }
+          return s;
+        }
+
+        return '' +
+          '<svg class="' + klass + '" viewBox="0 0 64 64" aria-hidden="true" focusable="false">' +
+            '<defs>' +
+              // 本体用グラデ
+              '<linearGradient id="' + uid + '-body" x1="0" y1="0" x2="0" y2="1">' +
+                buildStops(bodyStops) +
+              '</linearGradient>' +
+              // 台座用グラデ（少し濃いめ）
+              '<linearGradient id="' + uid + '-base" x1="0" y1="0" x2="0" y2="1">' +
+                buildStops(baseStops) +
+              '</linearGradient>' +
+            '</defs>' +
+
+            // 本体（3つ山のカーブ）
+            '<path fill="url(#' + uid + '-body)" d="M14 48 L18 24 C20 32 23 36 26 36 C28 36 30 28 32 18 C34 28 36 36 38 36 C41 36 44 32 46 24 L50 48 Z"/>' +
+
+            // 先端の丸（本体と同じグラデ）
+            '<circle cx="18" cy="19" r="5" fill="url(#' + uid + '-body)"/>' +
+            '<circle cx="32" cy="12" r="6" fill="url(#' + uid + '-body)"/>' +
+            '<circle cx="46" cy="19" r="5" fill="url(#' + uid + '-body)"/>' +
+
+            // 台座バー
+            '<rect x="10" y="51" width="44" height="8" rx="4" fill="url(#' + uid + '-base)"/>' +
+          '</svg>';
+      }
+
+      function buildRankings(rows) {
+        var map = { 'コール数': {}, 'アポ数': {}, 'アポ生産性': {}, '受注数': {}, '売上金額': {} };
+        var rateByName = {};
+
+        (rows || []).forEach(function (r) {
+          if (!r || !r.name) return;
+
+          if (r.metric === 'アポ率') {
+            var v = Number(r.actual);
+            if (!isNaN(v)) rateByName[r.name] = v;
+            return;
+          }
+
+          var metric = (r.metric === '商談数') ? 'アポ数' : r.metric;
+
+          if (map[metric] != null) {
+            var a = Number(r.actual);
+
+            // ★アポ生産性は「合算」じゃなく「その値」を使う
+            if (metric === 'アポ生産性') {
+              if (!isNaN(a)) map[metric][r.name] = a;
+            } else {
+              a = a || 0;
+              map[metric][r.name] = (map[metric][r.name] || 0) + a;
+            }
+          }
+        });
+
+        function toSortedArr(obj, asc, sortKeyFn) {
+          sortKeyFn = sortKeyFn || function (v) { return v; };
+
+          return Object.keys(obj)
+            .map(function (name) {
+              var value = obj[name];
+              return { name: name, value: value, _k: Number(sortKeyFn(value)) };
+            })
+            .sort(function (a, b) {
+              if (a._k !== b._k) return asc ? (a._k - b._k) : (b._k - a._k);
+              return String(a.name).localeCompare(String(b.name), 'ja');
+            })
+            .map(function (x) { return { name: x.name, value: x.value }; });
+        }
+
+        return {
+          calls: toSortedArr(map['コール数'], false),
+          deals: toSortedArr(map['アポ数'], false),
+
+          productivity: toSortedArr(map['アポ生産性'], true, function (v) {
+            var n = Number(v) || 0;
+            return (n > 0) ? n : Number.POSITIVE_INFINITY;
+          }),
+
+          orders: toSortedArr(map['受注数'], false),
+          sales:  toSortedArr(map['売上金額'], false),
+
+          rateByName: rateByName,
+          rawMap: map
+        };
+      }
+
+      function renderMetricList(list, metricName, rankingData) {
+        var rateByName = rankingData.rateByName || {};
+        var callsMap = rankingData.rawMap['コール数'] || {};
+        var html = '';
+
+        // ★同数は同順位（dense ranking：1,1,2…）
+        var lastValue = null;
+        var denseRank = 0;
+
+        list.forEach(function (item) {
+          var v = Number(item.value) || 0;
+
+          if (lastValue === null || v !== lastValue) {
+            denseRank += 1;
+            lastValue = v;
+          }
+          var rank = denseRank;
+
+          var rankClass = (rank === 1) ? ' rank-1' : (rank === 2) ? ' rank-2' : (rank === 3) ? ' rank-3' : '';
+
+          // ★王冠は「順位の上」に配置（badge内を縦並びにしている）
+          var badgeHtml = '';
+          if (rank === 1) badgeHtml = crownSvg(1, '#FFF9E6') + '<div class="rank-num">1位</div>';
+          else if (rank === 2) badgeHtml = crownSvg(2, '#CBD5E1') + '<div class="rank-num">2位</div>';
+          else if (rank === 3) badgeHtml = crownSvg(3, '#D97706') + '<div class="rank-num">3位</div>';
+          else badgeHtml = '<div class="rank-num">' + rank + '位</div>';
+
+          // ★表示（商談数だけ「〇件 / 〇%」）
+          var rightHtml = '';
+
+          if (metricName === 'アポ数') {
+            var raw = rateByName[item.name];
+            var percent = (raw != null && !isNaN(Number(raw)))
+              ? toPercent(raw)
+              : ((Number(callsMap[item.name]) || 0) > 0 ? (v / Number(callsMap[item.name])) * 100 : 0);
+
+            rightHtml = '<span>' + v + '件 / ' + percent.toFixed(0) + '%</span>';
+
+          } else if (metricName === 'アポ生産性') {
+            var s = Number(item.value);
+            var t = isNaN(s) ? '0' : s.toFixed(1).replace(/\.0$/, '');
+            rightHtml = '<span>' + t + '時間/件</span>';
+
+          } else if (metricName === '売上金額') {
+            rightHtml = '<span>¥' + formatInt(v) + '</span>';
+
+          } else {
+            rightHtml = '<span>' + v + '件</span>';
+          }
+
+          html += ''
+            + '<div class="rank-row' + rankClass + '">'
+              + '<div class="rank-left">'
+                + '<div class="rank-badge">' + badgeHtml + '</div>'
+                + '<div class="rank-name">' + escapeHtml(item.name) + '</div>'
+              + '</div>'
+              + '<div class="rank-right">' + rightHtml + '</div>'
+            + '</div>';
+        });
+
+        return html || '<div class="no-data">データがありません</div>';
+      }
+
+      function drawRanking(containerId, rows) {
+        var container = document.getElementById(containerId);
+        if (!container) return;
+
+        if (!rows || rows.length === 0) {
+          container.innerHTML = '<div class="no-data">データがありません</div>';
+          return;
+        }
+
+        var rankingData = buildRankings(rows);
+
+        container.innerHTML = ''
+          + '<div class="ranking-metric">'
+            + '<div class="ranking-metric-title metric-call">コール数</div>'
+            + renderMetricList(rankingData.calls, 'コール数', rankingData)
+          + '</div>'
+          + '<div class="ranking-metric">'
+            + '<div class="ranking-metric-title metric-deal">アポ数 / アポ率</div>'
+            + renderMetricList(rankingData.deals, 'アポ数', rankingData)
+          + '</div>'
+          + '<div class="ranking-metric">'
+            + '<div class="ranking-metric-title metric-productivity">アポ生産性</div>'
+            + renderMetricList(rankingData.productivity, 'アポ生産性', rankingData)
+          + '</div>'
+          + '<div class="ranking-metric">'
+            + '<div class="ranking-metric-title metric-order">受注数</div>'
+            + renderMetricList(rankingData.orders, '受注数', rankingData)
+          + '</div>'
+          + '<div class="ranking-metric">'
+            + '<div class="ranking-metric-title metric-sales">売上金額</div>'
+            + renderMetricList(rankingData.sales, '売上金額', rankingData)
+          + '</div>';
+      }
+
+      function drawDailyRankingView() {
+        var dailyRows = (chartData && chartData.daily && chartData.daily.grouped) ? chartData.daily.grouped : [];
+        drawRanking('ranking-daily', dailyRows);
+      }
+
+      function drawMonthlyRankingView() {
+        var monthlyRows = (chartData && chartData.monthly && chartData.monthly.grouped) ? chartData.monthly.grouped : [];
+        drawRanking('ranking-monthly', monthlyRows);
+      }
+
+      function setActiveView(view) {
+        currentView = view;
+        var dailyView          = document.getElementById('daily-view');
+        var dailyRankingView   = document.getElementById('daily-ranking-view');
+        var monthlyView        = document.getElementById('monthly-view');
+        var monthlyRankingView = document.getElementById('monthly-ranking-view');
+
+        var dailyBtn          = document.getElementById('btn-daily');
+        var dailyRankingBtn   = document.getElementById('btn-daily-ranking');
+        var monthlyBtn        = document.getElementById('btn-monthly');
+        var monthlyRankingBtn = document.getElementById('btn-monthly-ranking');
+
+        // いったん全部OFF
+        if (dailyView) dailyView.classList.remove('active');
+        if (dailyRankingView) dailyRankingView.classList.remove('active');
+        if (monthlyView) monthlyView.classList.remove('active');
+        if (monthlyRankingView) monthlyRankingView.classList.remove('active');
+
+        if (dailyBtn) dailyBtn.classList.remove('active');
+        if (dailyRankingBtn) dailyRankingBtn.classList.remove('active');
+        if (monthlyBtn) monthlyBtn.classList.remove('active');
+        if (monthlyRankingBtn) monthlyRankingBtn.classList.remove('active');
+
+        // 表示ON
+        if (view === 'daily') {
+          if (dailyView) dailyView.classList.add('active');
+          if (dailyBtn) dailyBtn.classList.add('active');
+        } else if (view === 'daily-ranking') {
+          if (dailyRankingView) dailyRankingView.classList.add('active');
+          if (dailyRankingBtn) dailyRankingBtn.classList.add('active');
+        } else if (view === 'monthly') {
+          if (monthlyView) monthlyView.classList.add('active');
+          if (monthlyBtn) monthlyBtn.classList.add('active');
+        } else if (view === 'monthly-ranking') {
+          if (monthlyRankingView) monthlyRankingView.classList.add('active');
+          if (monthlyRankingBtn) monthlyRankingBtn.classList.add('active');
+        }
+
+        // データがまだなら、ランキングだけ「読み込み中」を出して終了
+        if (!chartData) {
+          setLoadingUI(true);
+
+          if (view === 'daily-ranking') {
+            var rd = document.getElementById('ranking-daily');
+            if (rd) rd.innerHTML = '<div class="no-data">読み込み中...</div>';
+          }
+          if (view === 'monthly-ranking') {
+            var rm = document.getElementById('ranking-monthly');
+            if (rm) rm.innerHTML = '<div class="no-data">読み込み中...</div>';
+          }
+          return;
+        }
+
+        // グラフ描画 or ランキング描画
+        if (view === 'daily') {
+          if (chartData.daily && Array.isArray(chartData.daily.grouped) && chartData.daily.grouped.length > 0) {
+            drawSection('daily-main', '', chartData.daily.grouped);
+          } else {
+            var dailyContainer = document.getElementById('daily-main');
+            if (dailyContainer) {
+              dailyContainer.innerHTML = '<div class="no-data">「当日グラフ」シートにデータがありません</div>';
+            }
+          }
+        } else if (view === 'monthly') {
+          if (chartData.monthly && Array.isArray(chartData.monthly.grouped) && chartData.monthly.grouped.length > 0) {
+            drawSection('monthly-main', '', chartData.monthly.grouped);
+          } else {
+            var monthlyContainer = document.getElementById('monthly-main');
+            if (monthlyContainer) {
+              monthlyContainer.innerHTML = '<div class="no-data">「月間グラフ」シートにデータがありません</div>';
+            }
+          }
+        } else if (view === 'daily-ranking') {
+          drawDailyRankingView();
+        } else if (view === 'monthly-ranking') {
+          drawMonthlyRankingView();
+        }
+        requestAnimationFrame(syncRankLayoutVars_);
+      }
+
+    </script>
+  </head>
+  <body>
+
+    <!-- 右上：更新ボタン -->
+    <button id="btn-refresh" class="refresh-btn" onclick="onRefreshClick()">更新</button>
+
+    <!-- 左上：更新中表示 -->
+    <div id="updatingBadge" class="updating-badge hidden">
+      <span>更新中</span><span class="spinner" aria-hidden="true"></span>
+    </div>
+
+    <!-- 読み込み中ポップアップ（※更新中は表示しない） -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+      <div class="loading-modal" role="status" aria-live="polite">読み込み中...</div>
+    </div>
+
+    <!-- 更新後：反映確認ポップアップ -->
+    <div id="applyModalOverlay" class="apply-modal-overlay hidden">
+      <div class="apply-modal" role="dialog" aria-modal="true">
+        <div class="apply-modal-title">更新した内容は反映しますか？</div>
+        <div class="apply-modal-actions">
+          <button class="apply-chip ghost" onclick="onApplyNo()">いいえ</button>
+          <button class="apply-chip primary" onclick="onApplyYes()">はい</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="stickyHeader" class="sticky-header">
+      <h1>営業管理グラフ & ランキング</h1>
+      <div class="tab-bar">
+        <button id="btn-daily" class="tab-btn" onclick="setActiveView('daily')">当日グラフ</button>
+        <button id="btn-daily-ranking" class="tab-btn" onclick="setActiveView('daily-ranking')">当日ランキング</button>
+        <button id="btn-monthly" class="tab-btn" onclick="setActiveView('monthly')">月間グラフ</button>
+        <button id="btn-monthly-ranking" class="tab-btn" onclick="setActiveView('monthly-ranking')">月間ランキング</button>
+      </div>
+    </div>
+
+    <!-- 当日ビュー -->
+    <div id="daily-view" class="view">
+      <div class="chart-block">
+        <div id="daily-main" class="chart"></div>
+      </div>
+    </div>
+
+    <!-- 月間ビュー -->
+    <div id="monthly-view" class="view">
+      <div class="chart-block">
+        <div id="monthly-main" class="chart"></div>
+      </div>
+    </div>
+
+    <!-- 当日ランキングビュー -->
+    <div id="daily-ranking-view" class="view">
+      <div class="chart-block">
+        <div id="ranking-daily" class="ranking-metrics"></div>
+      </div>
+    </div>
+
+    <!-- 月間ランキングビュー -->
+    <div id="monthly-ranking-view" class="view">
+      <div class="chart-block">
+        <div id="ranking-monthly" class="ranking-metrics"></div>
+      </div>
+    </div>
+  </body>
+</html>
