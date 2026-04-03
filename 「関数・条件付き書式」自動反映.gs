@@ -71,9 +71,9 @@ function applyFormulasAndConditionalFormatting() {
 }))), "")`,
 
     20: `=IFERROR(ROUND(AVERAGE(FILTER({
-  IFERROR(({COL}5/{COL}18)*60, NA())
+  IFERROR(({COL}5/{COL}18), NA())
 }, ISNUMBER({
-  IFERROR(({COL}5/{COL}18)*60, NA())
+  IFERROR(({COL}5/{COL}18), NA())
 }))), 0), "")`,
 
     21: `="お疲れ様です！"&CHAR(10)&CHAR(10)&
